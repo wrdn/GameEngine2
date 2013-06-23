@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <vector>
+#include <string>
 
 extern "C"
 {
@@ -92,7 +93,8 @@ int wildcmp(const char *wild, const char *string) {
 }
 
 // searchTerm is the wild card string passed to wildcmp e.g. for all files ending in .lua in dir/ pass "*.lua" as the searchTerm
-int findFiles(char* searchTerm, char* directory, std::vector<char*> &outputVec)
+// To disable recursion, just set maxLevel=0
+int findFiles(char* searchTerm, const char* directory, std::vector<std::string> &outputVec, unsigned int maxLevel=-1, unsigned int level=0)
 {
   int numFound = 0;
   DIR *dir = opendir(directory);
@@ -101,20 +103,35 @@ int findFiles(char* searchTerm, char* directory, std::vector<char*> &outputVec)
     struct dirent *ent;
     while((ent = readdir(dir)) != NULL)
     {
-      if(ent->d_type == DT_REG && ent->d_name) // regular files only
+      if(!ent->d_name) continue;
+      
+      if(ent->d_type == DT_REG) // regular files
       {
 	if(wildcmp(searchTerm, ent->d_name))
 	{
-	  outputVec.push_back(ent->d_name);
+	  std::string outputFileName = std::string(directory);
+	  if(outputFileName[outputFileName.length()-1] != '/') outputFileName += "/";
+	  outputFileName += ent->d_name;
+	  
+	  outputVec.push_back(outputFileName);
 	  ++numFound;
 	}
       }
+      else if(ent->d_type == DT_DIR && level+1 <= maxLevel) // recurse down multiple levels (to to max depth)
+      {
+	if(strcmp(ent->d_name, ".") && strcmp(ent->d_name, ".."))
+	{
+	  std::string nextDir = std::string(directory) + "/" + std::string(ent->d_name);
+	  numFound += findFiles(searchTerm, nextDir.c_str(), outputVec, maxLevel, level+1);
+	}
+      }
     }
+    closedir(dir);
   }
   return numFound;
 }
 
-void loadAndRunScript(lua_State *l, char* filename)
+void loadAndRunScript(lua_State *l, const char* filename)
 {
   printf("Running script %s\n", filename);
   loadScript(l, filename);
@@ -123,13 +140,13 @@ void loadAndRunScript(lua_State *l, char* filename)
 
 int main()
 {
-  std::vector<char*> luaFiles;
+  std::vector<std::string> luaFiles;
   int numLuaFiles = findFiles("*.lua", "data", luaFiles);
   
   printf("Found %i lua file(s)\n", numLuaFiles);
   
   for(int i=0;i<luaFiles.size();++i)
-    printf("Found %s\n", luaFiles[i]);
+    printf("Found %s\n", luaFiles[i].c_str());
   
   lua_State *l = lua_open();
   lua_open_libs(l);
@@ -138,9 +155,7 @@ int main()
   
   for(int i=0;i<luaFiles.size();++i)
   {
-    char fullPath[256];
-    sprintf(fullPath, "data/%s", luaFiles[i]);
-    loadAndRunScript(l, fullPath);
+    loadAndRunScript(l, luaFiles[i].c_str());
   }
   
   lua_close(l);

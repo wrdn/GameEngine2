@@ -13,8 +13,9 @@ extern "C"
   #include "lualib.h"
 }
 
-#define TRACE_MSG(channel, msg, ...) { printf("[%s]", channel); printf(" "); printf(msg, __VA_ARGS__); printf("\n"); }
-#define ERROR_TRACE(msg, ...) { TRACE_MSG("ERROR", msg, __VA_ARGS__); }
+#define TRACE_MSG(channel, ...) { printf("[%s]", channel); printf(" "); printf(__VA_ARGS__); printf("\n"); }
+#define TRACE(...) { TRACE_MSG("TRACE", __VA_ARGS__); }
+#define ERROR_TRACE(...) { TRACE_MSG("ERROR", __VA_ARGS__); }
 
 // Open various common libraries
 void lua_open_libs(lua_State *l)
@@ -94,7 +95,7 @@ int wildcmp(const char *wild, const char *string) {
 
 // searchTerm is the wild card string passed to wildcmp e.g. for all files ending in .lua in dir/ pass "*.lua" as the searchTerm
 // To disable recursion, just set maxLevel=0
-int findFiles(char* searchTerm, const char* directory, std::vector<std::string> &outputVec, unsigned int maxLevel=-1, unsigned int level=0)
+int findFiles(const char* searchTerm, const char* directory, std::vector<std::string> &outputVec, unsigned int maxLevel=-1, unsigned int level=0)
 {
   std::vector<char*> subDirs;
   
@@ -142,7 +143,7 @@ int findFiles(char* searchTerm, const char* directory, std::vector<std::string> 
 
 void loadAndRunScript(lua_State *l, const char* filename)
 {
-  printf("Running script %s\n", filename);
+  TRACE("Running script %s", filename);
   loadScript(l, filename);
   lua_pcall(l,0,0,0);
 }
@@ -152,15 +153,17 @@ int main()
   std::vector<std::string> luaFiles;
   int numLuaFiles = findFiles("*.lua", "data", luaFiles);
   
-  printf("Found %i lua file(s)\n", numLuaFiles);
+  TRACE("Found %i lua file(s)", numLuaFiles);
   
   for(int i=0;i<luaFiles.size();++i)
-    printf("Found %s\n", luaFiles[i].c_str());
+  {
+    TRACE("Found %s", luaFiles[i].c_str());
+  }
   
   lua_State *l = lua_open();
   lua_open_libs(l);
   
-  printf("Executing scripts...\n");
+  TRACE("Executing scripts...");
   
   for(int i=0;i<luaFiles.size();++i)
   {

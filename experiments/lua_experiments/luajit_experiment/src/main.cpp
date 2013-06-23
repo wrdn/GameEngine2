@@ -96,6 +96,8 @@ int wildcmp(const char *wild, const char *string) {
 // To disable recursion, just set maxLevel=0
 int findFiles(char* searchTerm, const char* directory, std::vector<std::string> &outputVec, unsigned int maxLevel=-1, unsigned int level=0)
 {
+  std::vector<char*> subDirs;
+  
   int numFound = 0;
   DIR *dir = opendir(directory);
   if(dir)
@@ -121,11 +123,18 @@ int findFiles(char* searchTerm, const char* directory, std::vector<std::string> 
       {
 	if(strcmp(ent->d_name, ".") && strcmp(ent->d_name, ".."))
 	{
-	  std::string nextDir = std::string(directory) + "/" + std::string(ent->d_name);
-	  numFound += findFiles(searchTerm, nextDir.c_str(), outputVec, maxLevel, level+1);
+	  subDirs.push_back(ent->d_name); // add the directory to the list of directories to search
 	}
       }
     }
+    
+    // after we've finished with all of the files in the current directory, we'll search the sub-directories, the next level down
+    for(int i=0;i<subDirs.size();++i)
+    {
+      std::string nextDir = std::string(directory) + "/" + std::string(subDirs[i]);
+      numFound += findFiles(searchTerm, nextDir.c_str(), outputVec, maxLevel, level+1);
+    }
+    
     closedir(dir);
   }
   return numFound;

@@ -1,4 +1,9 @@
 #include <stdio.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <string.h>
+#include <ctype.h>
+#include <vector>
 
 extern "C"
 {
@@ -52,15 +57,91 @@ bool loadScript(lua_State *l, const char* luaFile)
   return loadFileRes == 0;
 }
 
+int wildcmp(const char *wild, const char *string) {
+  // Written by Jack Handy - <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
+  const char *cp = NULL, *mp = NULL;
+
+  while ((*string) && (*wild != '*')) {
+    if ((*wild != *string) && (*wild != '?')) {
+      return 0;
+    }
+    wild++;
+    string++;
+  }
+
+  while (*string) {
+    if (*wild == '*') {
+      if (!*++wild) {
+        return 1;
+      }
+      mp = wild;
+      cp = string+1;
+    } else if ((*wild == *string) || (*wild == '?')) {
+      wild++;
+      string++;
+    } else {
+      wild = mp;
+      string = cp++;
+    }
+  }
+
+  while (*wild == '*') {
+    wild++;
+  }
+  return !*wild;
+}
+
+// searchTerm is the wild card string passed to wildcmp e.g. for all files ending in .lua in dir/ pass "*.lua" as the searchTerm
+int findFiles(char* searchTerm, char* directory, std::vector<char*> &outputVec)
+{
+  int numFound = 0;
+  DIR *dir = opendir(directory);
+  if(dir)
+  {
+    struct dirent *ent;
+    while((ent = readdir(dir)) != NULL)
+    {
+      if(ent->d_type == DT_REG && ent->d_name) // regular files only
+      {
+	if(wildcmp(searchTerm, ent->d_name))
+	{
+	  outputVec.push_back(ent->d_name);
+	  ++numFound;
+	}
+      }
+    }
+  }
+  return numFound;
+}
+
+void loadAndRunScript(lua_State *l, char* filename)
+{
+  printf("Running script %s\n", filename);
+  loadScript(l, filename);
+  lua_pcall(l,0,0,0);
+}
+
 int main()
 {
+  std::vector<char*> luaFiles;
+  int numLuaFiles = findFiles("*.lua", "data", luaFiles);
+  
+  printf("Found %i lua file(s)\n", numLuaFiles);
+  
+  for(int i=0;i<luaFiles.size();++i)
+    printf("Found %s\n", luaFiles[i]);
+  
   lua_State *l = lua_open();
   lua_open_libs(l);
   
-  char filename[128] = "data/first.lua";
-  loadScript(l, filename);
+  printf("Executing scripts...\n");
   
-  lua_pcall(l, 0,0,0);
+  for(int i=0;i<luaFiles.size();++i)
+  {
+    char fullPath[256];
+    sprintf(fullPath, "data/%s", luaFiles[i]);
+    loadAndRunScript(l, fullPath);
+  }
   
   lua_close(l);
   

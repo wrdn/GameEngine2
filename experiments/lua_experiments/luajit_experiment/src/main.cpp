@@ -13,7 +13,7 @@ extern "C"
   #include "lualib.h"
 }
 
-#define TRACE_MSG(channel, ...) { printf("[%s]", channel); printf(" "); printf(__VA_ARGS__); printf("\n"); }
+#define TRACE_MSG(channel, ...) { printf("[%s]", channel); printf(" "); printf(__VA_ARGS__); printf("\n"); fflush(stdout); }
 #define TRACE(...) { TRACE_MSG("TRACE", __VA_ARGS__); }
 #define ERROR_TRACE(...) { TRACE_MSG("ERROR", __VA_ARGS__); }
 

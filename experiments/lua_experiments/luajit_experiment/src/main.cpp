@@ -130,7 +130,7 @@ int findFiles(const char* searchTerm, const char* directory, std::vector<std::st
     }
     
     // after we've finished with all of the files in the current directory, we'll search the sub-directories, the next level down
-    for(int i=0;i<subDirs.size();++i)
+    for(unsigned int i=0;i<subDirs.size();++i)
     {
       std::string nextDir = std::string(directory) + "/" + std::string(subDirs[i]);
       numFound += findFiles(searchTerm, nextDir.c_str(), outputVec, maxLevel, level+1);
@@ -155,7 +155,7 @@ int main()
   
   TRACE("Found %i lua file(s)", numLuaFiles);
   
-  for(int i=0;i<luaFiles.size();++i)
+  for(unsigned int i=0;i<luaFiles.size();++i)
   {
     TRACE("Found %s", luaFiles[i].c_str());
   }
@@ -165,7 +165,7 @@ int main()
   
   TRACE("Executing scripts...");
   
-  for(int i=0;i<luaFiles.size();++i)
+  for(unsigned int i=0;i<luaFiles.size();++i)
   {
     loadAndRunScript(l, luaFiles[i].c_str());
   }
